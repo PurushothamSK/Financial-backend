@@ -24,17 +24,17 @@ jobs:
       with:
         path: |
           ~/.npm
-          backend/node_modules
-        key: ${{ runner.os }}-node-${{ hashFiles('backend/package-lock.json') }}
+          BACKEND/node_modules
+        key: ${{ runner.os }}-node-${{ hashFiles('BACKEND/package-lock.json') }}
         restore-keys: |
           ${{ runner.os }}-node-
 
     - name: Install Dependencies
-      working-directory: ./backend
+      working-directory: ./BACKEND
       run: npm install
 
     - name: Archive Backend
-      working-directory: ./backend
+      working-directory: ./BACKEND
       run: zip -r backend.zip .
 
     - name: Copy Backend to EC2
@@ -43,7 +43,7 @@ jobs:
         host: ${{ secrets.EC2_HOST }}
         username: ubuntu
         key: ${{ secrets.EC2_KEY }}
-        source: "backend/backend.zip"
+        source: "BACKEND/backend.zip"
         target: "/home/ubuntu/"
 
     - name: Deploy Backend via SSH
@@ -53,7 +53,7 @@ jobs:
         username: ubuntu
         key: ${{ secrets.EC2_KEY }}
         script: |
-          unzip -o backend.zip -d backend
-          cd backend
+          unzip -o backend.zip -d BACKEND
+          cd BACKEND
           npm install
-          pm2 restart backend || pm2 start server.js --name backend
+          pm2 restart server.js || pm2 start server.js --name backend
