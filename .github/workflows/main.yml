@@ -18,23 +18,21 @@ jobs:
       with:
         node-version: '20'
 
-    # Cache node_modules for faster install
+    # Cache node_modules
     - name: Cache Node Modules
       uses: actions/cache@v3
       with:
         path: |
           ~/.npm
-          BACKEND/node_modules
-        key: ${{ runner.os }}-node-${{ hashFiles('BACKEND/package-lock.json') }}
+          node_modules
+        key: ${{ runner.os }}-node-${{ hashFiles('package-lock.json') }}
         restore-keys: |
           ${{ runner.os }}-node-
 
     - name: Install Dependencies
-      working-directory: ./BACKEND
       run: npm install
 
     - name: Archive Backend
-      working-directory: ./BACKEND
       run: zip -r backend.zip .
 
     - name: Copy Backend to EC2
@@ -43,7 +41,7 @@ jobs:
         host: ${{ secrets.EC2_HOST }}
         username: ubuntu
         key: ${{ secrets.EC2_KEY }}
-        source: "BACKEND/backend.zip"
+        source: "backend.zip"
         target: "/home/ubuntu/"
 
     - name: Deploy Backend via SSH
@@ -53,7 +51,7 @@ jobs:
         username: ubuntu
         key: ${{ secrets.EC2_KEY }}
         script: |
-          unzip -o backend.zip -d BACKEND
-          cd BACKEND
+          unzip -o backend.zip -d backend
+          cd backend
           npm install
           pm2 restart server.js || pm2 start server.js --name backend
