@@ -1,0 +1,59 @@
+name: Deploy Backend to EC2
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Repo
+      uses: actions/checkout@v3
+
+    - name: Setup Node
+      uses: actions/setup-node@v3
+      with:
+        node-version: '20'
+
+    # Cache node_modules for faster install
+    - name: Cache Node Modules
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.npm
+          backend/node_modules
+        key: ${{ runner.os }}-node-${{ hashFiles('backend/package-lock.json') }}
+        restore-keys: |
+          ${{ runner.os }}-node-
+
+    - name: Install Dependencies
+      working-directory: ./backend
+      run: npm install
+
+    - name: Archive Backend
+      working-directory: ./backend
+      run: zip -r backend.zip .
+
+    - name: Copy Backend to EC2
+      uses: appleboy/scp-action@v0.1.4
+      with:
+        host: ${{ secrets.EC2_HOST }}
+        username: ubuntu
+        key: ${{ secrets.EC2_KEY }}
+        source: "backend/backend.zip"
+        target: "/home/ubuntu/"
+
+    - name: Deploy Backend via SSH
+      uses: appleboy/ssh-action@v0.1.7
+      with:
+        host: ${{ secrets.EC2_HOST }}
+        username: ubuntu
+        key: ${{ secrets.EC2_KEY }}
+        script: |
+          unzip -o backend.zip -d backend
+          cd backend
+          npm install
+          pm2 restart backend || pm2 start server.js --name backend
