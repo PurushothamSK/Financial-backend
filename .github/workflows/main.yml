@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    # 1️⃣ Checkout the repo
+    # 1️⃣ Checkout repository
     - name: Checkout Repo
       uses: actions/checkout@v3
 
@@ -26,17 +26,19 @@ jobs:
       with:
         path: |
           ~/.npm
-          node_modules
-        key: ${{ runner.os }}-node-${{ hashFiles('package-lock.json') }}
+          backend/node_modules
+        key: ${{ runner.os }}-node-${{ hashFiles('backend/package-lock.json') }}
         restore-keys: |
           ${{ runner.os }}-node-
 
     # 4️⃣ Install dependencies
     - name: Install Dependencies
+      working-directory: ./backend
       run: npm install
 
     # 5️⃣ Archive backend
     - name: Archive Backend
+      working-directory: ./backend
       run: zip -r backend.zip .
 
     # 6️⃣ Copy backend to EC2
@@ -47,11 +49,8 @@ jobs:
         username: ${{ secrets.EC2_USERNAME }}
         key: ${{ secrets.EC2_KEY_BASE64 }}
         key_path: /tmp/mern-key.pem
-        source: "backend.zip"
+        source: "backend/backend.zip"
         target: "/home/ubuntu/"
-        script: |
-          # Decode key on runner
-          echo "${{ secrets.EC2_KEY_BASE64 }}" | base64 --decode > /tmp/mern-key.pem
 
     # 7️⃣ Deploy backend via SSH
     - name: Deploy Backend via SSH
@@ -62,9 +61,11 @@ jobs:
         key: ${{ secrets.EC2_KEY_BASE64 }}
         key_path: /tmp/mern-key.pem
         script: |
-          # Decode key
+          # Decode the key
           echo "${{ secrets.EC2_KEY_BASE64 }}" | base64 --decode > /tmp/mern-key.pem
-          # Unzip and deploy
+          chmod 600 /tmp/mern-key.pem
+          
+          # Unzip backend and deploy
           unzip -o backend.zip -d backend
           cd backend
           npm install
